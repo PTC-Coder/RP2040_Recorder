@@ -1,0 +1,357 @@
+import machine
+import time
+import utime
+import sdcard
+import uos
+import math
+import random
+import time, array, uctypes, rp_devices as devs
+
+def enum(**enums: int):
+    return type('Enum', (), enums)
+
+Channel = enum(MONO=1, STEREO=2)
+
+AUDIO_BUFFER_SIZE = 50  #number of samples
+
+# ======= AUDIO CONFIGURATION =======
+WAV_FILE = "test.wav"
+RECORD_TIME_IN_SECONDS = 3
+WAV_SAMPLE_SIZE_IN_BITS = 16
+FORMAT = Channel.MONO
+SAMPLE_RATE_IN_HZ = 48000
+
+SD_SPI_PORT = 0
+SD_SPI_SCK_PIN = 18
+SD_SPI_MOSI_PIN = 19
+SD_SPI_MISO_PIN = 16
+SD_SPI_CS_PIN = 17
+SD_SPI_BAUD_RATE = 40000000
+
+    
+def create_wav_header(sampleRate, bitsPerSample, num_channels, num_samples):
+    datasize = num_samples * num_channels * bitsPerSample // 8
+    o = bytes("RIFF", "ascii")  # (4byte) Marks file as RIFF
+    o += (datasize + 36).to_bytes(
+        4, "little"
+    )  # (4byte) File size in bytes excluding this and RIFF marker
+    o += bytes("WAVE", "ascii")  # (4byte) File type
+    o += bytes("fmt ", "ascii")  # (4byte) Format Chunk Marker
+    o += (16).to_bytes(4, "little")  # (4byte) Length of above format data
+    o += (1).to_bytes(2, "little")  # (2byte) Format type (1 - PCM)
+    o += (num_channels).to_bytes(2, "little")  # (2byte)
+    o += (sampleRate).to_bytes(4, "little")  # (4byte)
+    o += (sampleRate * num_channels * bitsPerSample // 8).to_bytes(4, "little")  # (4byte)
+    o += (num_channels * bitsPerSample // 8).to_bytes(2, "little")  # (2byte)
+    o += (bitsPerSample).to_bytes(2, "little")  # (2byte)
+    o += bytes("data", "ascii")  # (4byte) Data Chunk Marker
+    o += (datasize).to_bytes(4, "little")  # (4byte) Data size in bytes
+    return o
+
+def process_buff(adc_buffer):
+    count = 0
+    for sample in adc_buffer:
+        # convert 12-bit to 16-bit by multiplying 2^4 and then subtract half of 16-bit to center the signal at 0
+        adc_buffer[count] = round((sample + 1) * 2**4) - 32768
+        count += 1
+
+#======================== LED and Push Button =======================
+#Pico default LED
+green_led = machine.Pin(25, machine.Pin.OUT)
+
+red_led = machine.Pin(11, machine.Pin.OUT)
+red_btn = machine.Pin(10, machine.Pin.IN, machine.Pin.PULL_UP)
+
+red_last = time.ticks_ms()
+red_state = False
+
+def button_handler(pin):
+    global red_last, red_btn, red_state
+      
+    if pin is red_btn:
+        #debouncing by checking if last interrupt was more than 150 ms
+        if time.ticks_diff(time.ticks_ms(), red_last) > 500:
+            #red_led.toggle()
+            red_state = True
+            red_last = time.ticks_ms()
+
+red_led.value(0)  #turn LED off
+red_btn.irq(trigger = machine.Pin.IRQ_FALLING, handler = button_handler)
+
+# ===================================================================
+
+#============================ ADC & DMA Setup ============================
+ADC_CHAN = 0
+ADC_PIN  = 26 + ADC_CHAN
+
+adc = devs.ADC_DEVICE
+pin = devs.GPIO_PINS[ADC_PIN]
+pad = devs.PAD_PINS[ADC_PIN]
+pin.GPIO_CTRL_REG = devs.GPIO_FUNC_NULL
+pad.PAD_REG = 0
+
+adc.CS_REG = adc.FCS_REG = 0
+adc.CS.EN = 1
+adc.CS.AINSEL = ADC_CHAN
+
+DMA_CH0 = 0
+DMA_CH1 = 1
+
+NSAMPLES = AUDIO_BUFFER_SIZE   #24000 max
+RATE = SAMPLE_RATE_IN_HZ
+dma_chan0 = devs.DMA_CHANS[DMA_CH0]
+dma0 = devs.DMA_DEVICE
+
+dma_chan1 = devs.DMA_CHANS[DMA_CH1]
+dma1 = devs.DMA_DEVICE
+
+adc.FCS.EN = adc.FCS.DREQ_EN = 1
+# adc_buff0 = array.array('H', (0 for _ in range(NSAMPLES)))
+# adc_buff1 = array.array('H', (0 for _ in range(NSAMPLES)))
+
+adc_buff0 = bytearray(NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8)
+adc_buff0_mv = memoryview(adc_buff0)
+
+adc_buff1 = bytearray(NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8)
+adc_buff1_mv = memoryview(adc_buff1)
+
+# ===========================================================
+# Assign chip select (CS) pin (and start it high)
+cs = machine.Pin(17, machine.Pin.OUT)
+
+# Initialize the SD card
+spi=machine.SPI(0,
+        baudrate=40000000,
+        polarity=0,
+        phase=0,
+        bits=8,
+        firstbit=machine.SPI.MSB,
+        sck=machine.Pin(18),
+        mosi=machine.Pin(19),
+        miso=machine.Pin(16))
+
+sd=sdcard.SDCard(spi, cs)
+
+# Mount filesystem, FAT32
+vfs = uos.VfsFat(sd)
+
+
+while True:
+    if red_state:
+        red_state = False
+        for i in range(2):
+            red_led.value(1)
+            time.sleep_ms(250)
+            red_led.value(0)
+            time.sleep_ms(250)
+        red_led.value(1)
+        
+        uos.mount(vfs, "/sd")
+
+        format_to_channels = {Channel.MONO: 1, Channel.STEREO: 2}
+        NUM_CHANNELS = format_to_channels[FORMAT]
+        WAV_SAMPLE_SIZE_IN_BYTES = WAV_SAMPLE_SIZE_IN_BITS // 8
+        RECORDING_SIZE_IN_BYTES = (
+            RECORD_TIME_IN_SECONDS * SAMPLE_RATE_IN_HZ * WAV_SAMPLE_SIZE_IN_BYTES * NUM_CHANNELS
+        )
+        
+        print("Creating WAV File Header ...")        
+        wav = open("/sd/{}".format(WAV_FILE), "wb")  #write in bytes
+        wav_header = create_wav_header(
+            SAMPLE_RATE_IN_HZ,
+            WAV_SAMPLE_SIZE_IN_BITS,
+            NUM_CHANNELS,
+            SAMPLE_RATE_IN_HZ * RECORD_TIME_IN_SECONDS,
+        )
+        num_bytes_written = wav.write(wav_header)
+
+        num_sample_bytes_written_to_wav = 0
+
+        print("Sample Rate (kHz): " + str(SAMPLE_RATE_IN_HZ//1000) + ", Total Time (s): " + str(RECORD_TIME_IN_SECONDS))
+        print("Recording size: {} Bytes".format(RECORDING_SIZE_IN_BYTES))
+        print("==========  START RECORDING ==========")
+        green_led.value(1) 
+        try:
+            
+            #=================== Configure ADC and DMA Triggers ============
+            #Section 4.9 RP2040 datasheet - set integer part of the clock and
+            #ignore the fractional part ( <<8  is used for that)
+            adc.DIV_REG = (48000000 // RATE - 1) << 8
+            adc.FCS.THRESH = adc.FCS.OVER = adc.FCS.UNDER = 1
+
+            dma_chan0.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+            dma_chan0.WRITE_ADDR_REG = uctypes.addressof(adc_buff0_mv)
+            dma_chan0.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+
+            dma_chan0.CTRL_TRIG_REG = 0
+            dma_chan0.CTRL_TRIG.CHAIN_TO = DMA_CH1
+            dma_chan0.CTRL_TRIG.INCR_WRITE = dma_chan0.CTRL_TRIG.IRQ_QUIET = 1
+            dma_chan0.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+            #Data size. 0=byte, 1=halfword, 2=word
+            dma_chan0.CTRL_TRIG.DATA_SIZE = 0   
+            dma_chan0.CTRL_TRIG.EN = 1
+
+            dma_chan1.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+            dma_chan1.WRITE_ADDR_REG = uctypes.addressof(adc_buff1_mv)
+            dma_chan1.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+
+            dma_chan1.CTRL_TRIG_REG = 1
+            dma_chan1.CTRL_TRIG.CHAIN_TO = DMA_CH0
+            dma_chan1.CTRL_TRIG.INCR_WRITE = dma_chan1.CTRL_TRIG.IRQ_QUIET = 1
+            dma_chan1.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+            dma_chan1.CTRL_TRIG.DATA_SIZE = 0   
+            dma_chan1.CTRL_TRIG.EN = 0
+            
+            nextBuffer = 1
+            
+            try:
+                    
+                #Clear down ADC FIFO so no data mixing
+                while adc.FCS.LEVEL:
+                    x = adc.FIFO_REG
+
+                adc.CS.START_MANY = 1
+
+                while num_sample_bytes_written_to_wav < RECORDING_SIZE_IN_BYTES:
+                    
+                    #print("Byte written: " + str(num_sample_bytes_written_to_wav) + "/" + str(RECORDING_SIZE_IN_BYTES))
+
+                    
+                    if(nextBuffer == 0 and not dma_chan1.CTRL_TRIG.BUSY):
+                        
+                        # Each sample is a 16-bit value or 2 bytes
+                        num_bytes_read_from_mic = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8 
+#                         if num_bytes_read_from_mic > 0:
+# #                             num_bytes_to_write = min(
+# #                                 num_bytes_read_from_mic, RECORDING_SIZE_IN_BYTES - num_sample_bytes_written_to_wav
+# #                             )
+                        num_bytes_to_write = num_bytes_read_from_mic
+                        process_buff(adc_buff1_mv)
+
+                        # write samples to WAV file
+                        num_bytes_written = wav.write(adc_buff1_mv[:num_bytes_to_write])
+                        
+                        print("Writing from buff1: " + str(num_bytes_to_write) + " bytes")
+                        
+                        num_sample_bytes_written_to_wav += num_bytes_written
+                        
+                        print("Total Byte written: " + str(num_sample_bytes_written_to_wav) + "/" + str(RECORDING_SIZE_IN_BYTES))
+                                                
+                        dma_chan1.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+                        dma_chan1.WRITE_ADDR_REG = uctypes.addressof(adc_buff1_mv)
+                        dma_chan1.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+                        
+                        dma_chan0.CTRL_TRIG.EN = 1
+                        dma_chan1.CTRL_TRIG.EN = 0                        
+                                               
+                        print("Trigger DMA0 next")
+                        
+#                         dma_chan0.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+#                         dma_chan0.WRITE_ADDR_REG = uctypes.addressof(adc_buff0_mv)
+#                         dma_chan0.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+# 
+#                         dma_chan0.CTRL_TRIG_REG = 0
+#                         dma_chan0.CTRL_TRIG.CHAIN_TO = DMA_CH1
+#                         dma_chan0.CTRL_TRIG.INCR_WRITE = dma_chan0.CTRL_TRIG.IRQ_QUIET = 1
+#                         dma_chan0.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+#                         #Data size. 0=byte, 1=halfword, 2=word
+#                         dma_chan0.CTRL_TRIG.DATA_SIZE = 0   
+#                         dma_chan0.CTRL_TRIG.EN = 1
+# 
+                        dma_chan1.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+                        dma_chan1.WRITE_ADDR_REG = uctypes.addressof(adc_buff1_mv)
+                        dma_chan1.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+# 
+#                         dma_chan1.CTRL_TRIG_REG = 1
+#                         dma_chan1.CTRL_TRIG.CHAIN_TO = DMA_CH0
+#                         dma_chan1.CTRL_TRIG.INCR_WRITE = dma_chan1.CTRL_TRIG.IRQ_QUIET = 1
+#                         dma_chan1.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+#                         dma_chan1.CTRL_TRIG.DATA_SIZE = 0   
+#                         dma_chan1.CTRL_TRIG.EN = 0
+                        
+                        #adc.CS.START_MANY = 1
+                        nextBuffer = 1
+                        
+                        
+                    
+                    if(nextBuffer == 1 and not dma_chan0.CTRL_TRIG.BUSY):
+                        
+                        num_bytes_read_from_mic = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+#                         if num_bytes_read_from_mic > 0:
+#                             #num_bytes_to_write = min(
+#                             #    num_bytes_read_from_mic, RECORDING_SIZE_IN_BYTES - num_sample_bytes_written_to_wav                            
+#                             #)
+                        num_bytes_to_write = num_bytes_read_from_mic
+                        process_buff(adc_buff0_mv[:num_bytes_to_write])
+
+                        # write samples to WAV file
+                        num_bytes_written = wav.write(adc_buff0_mv[:num_bytes_to_write])
+                        
+                        print("Writing from buff0: " + str(num_bytes_to_write) + " bytes")
+                        
+                        num_sample_bytes_written_to_wav += num_bytes_written
+                        
+                        print("Total Byte written: " + str(num_sample_bytes_written_to_wav) + "/" + str(RECORDING_SIZE_IN_BYTES))
+
+                        
+                        dma_chan0.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+                        dma_chan0.WRITE_ADDR_REG = uctypes.addressof(adc_buff0_mv)
+                        dma_chan0.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+                        
+                        dma_chan0.CTRL_TRIG.EN = 0
+                        dma_chan1.CTRL_TRIG.EN = 1                                               
+                        
+                        print("Trigger DMA1 next")
+
+#                         dma_chan0.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+#                         dma_chan0.WRITE_ADDR_REG = uctypes.addressof(adc_buff0_mv)
+#                         dma_chan0.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+# 
+#                         dma_chan0.CTRL_TRIG_REG = 0
+#                         dma_chan0.CTRL_TRIG.CHAIN_TO = DMA_CH1
+#                         dma_chan0.CTRL_TRIG.INCR_WRITE = dma_chan0.CTRL_TRIG.IRQ_QUIET = 1
+#                         dma_chan0.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+#                         #Data size. 0=byte, 1=halfword, 2=word
+#                         dma_chan0.CTRL_TRIG.DATA_SIZE = 0   
+#                         dma_chan0.CTRL_TRIG.EN = 0
+# 
+                        dma_chan1.READ_ADDR_REG = devs.ADC_FIFO_ADDR
+                        dma_chan1.WRITE_ADDR_REG = uctypes.addressof(adc_buff1_mv)
+                        dma_chan1.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
+# 
+#                         dma_chan1.CTRL_TRIG_REG = 1
+#                         dma_chan1.CTRL_TRIG.CHAIN_TO = DMA_CH0
+#                         dma_chan1.CTRL_TRIG.INCR_WRITE = dma_chan1.CTRL_TRIG.IRQ_QUIET = 1
+#                         dma_chan1.CTRL_TRIG.TREQ_SEL = devs.DREQ_ADC
+#                         dma_chan1.CTRL_TRIG.DATA_SIZE = 0   
+#                         dma_chan1.CTRL_TRIG.EN = 1
+                        
+                        #adc.CS.START_MANY = 1
+                        nextBuffer = 0
+                        
+                    #print("Next Buffer: (" + str(nextBuffer) + "), waiting for trigger: DMA0 Busy: [" + str(dma_chan0.CTRL_TRIG.BUSY) + "]" + ", DMA1 Busy: [" + str(dma_chan1.CTRL_TRIG.BUSY) + "]")
+
+
+            except (KeyboardInterrupt, Exception) as e:
+                print("Exception {} {}".format(type(e).__name__, e))
+                               
+            adc.CS.START_MANY = 0
+            dma_chan0.CTRL_TRIG.EN = 0
+            dma_chan1.CTRL_TRIG.EN = 0
+            
+            print("==========  DONE RECORDING ==========")
+        except (KeyboardInterrupt, Exception) as e:
+            print("caught exception {} {}".format(type(e).__name__, e))
+
+               
+        green_led.value(0)
+        red_led.value(0)
+        # cleanup
+        wav.close()
+        uos.umount("/sd")
+
+        print("Done")
+            
+
+
+
