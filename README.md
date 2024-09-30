@@ -91,12 +91,18 @@ print("Hello Micropython!")
 
 ## Final Circuit
 1. Load [main.py](/Src/main.py) into the Pico along with the other 2 files [rp_devices.py](/Src/rp_devices.py), [sdcard.py](/Src/sdcard.py) we uploaded earlier from the setup step.
-2. Power cycle the Pico by unplugging the USB connector, wait 2 seconds, and plug it back in.
+2. Power cycle the Pico by unplugging the USB connector, wait 2 seconds, and plug it back in.  **Important** Make sure that your laptop is floating (not plugged into the AC power source) or you'll see a lot of noise in the recording.
 3. Because we now have main.py in the Pico memory, it'll automatically execute the code in main.py script.
 4. If you have everything wired up correctly, you should be able to just insert a FAT32 formatted SD card into the Card Reader and click the push button to activate recording.  Note that the LED will turn on for a few second to indicate that memory is being allocated for the recording.  The LED will flash twice and then turn solid at the same time as the Green LED on the Pico turns on.  This indicate that the recording started and it'll go for 10 seconds and all the light will turn off.  SD Card can be checked for the WAV file of the recording.  Please also note that the Pico has to be power cycled to do another recording.  There's some additional work to be done to allow multiple recordings without power cycling.
 5. This recorder doesn't have the greatest audio quality due to using the built-in 12-bit ADC on the Pico.  The recording runs at 16kHz sampling rate and this is the best that this recorder can do without doing a DMA Ping-Pong buffering technique.
 6. The WAV file can be opened with the [Raven Software](https://store.birds.cornell.edu/collections/raven-sound-software) to analyze the audio.
 
-![alt text](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/spectrogram.png?raw=true)
+![Sample Spectrogram](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/spectrogram.png?raw=true)
+
+7. The audio quality could be significantly improved if you use a higher quality electret element.
+
+![Better Microphone](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/BetterElectret.png?raw=true)
+
+
 
 
