@@ -1,6 +1,6 @@
 # RP2040_Recorder
 A simple mono channel recorder using an RP2040 Pico connected to an electret mic with pre-amp.  The recorder can write the audio to a FAT32 formatted SD Card at 16kHz sampling
-![alt text](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/Breadboard.png?raw=true)
+![alt text](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/Breadboard2.png?raw=true)
 
 ## Components:
 * QTY 1 [RP2040 Pico](https://www.raspberrypi.com/products/raspberry-pi-pico/)
@@ -20,10 +20,17 @@ A simple mono channel recorder using an RP2040 Pico connected to an electret mic
 2. RP2040 Pico will automatically close the mounted drive and reboot itself with the new Firmware.  A good thing to note if you ever run into a bricked RP2040 from coding, you can load [flash_nuke.uf2](/Micropython_FW/flash_nuke.uf2) to clear all memory of the Pico.
 3. Download and install [Thonny IDE](https://thonny.org/) on your system.  Select the appropriate O/S to download.
 4. Launch Thonny after completing the installation.  If your Pico is still connected to the computer, you should be able to select the BoardCDC @ COM port option in the lower right corner of the IDE to connect to the Read–eval–print loop (REPL) on the Pico.
+
 ![Thonny Connect](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/ConnectToThonny.png?raw=true)
+
 5. It's a good idea to show the File viewing window.  Select View -> File to check the option.  You'll need this to load codes into Pico's flash memory.
+
 ![Thonny View Files](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/Thonny_view_file.png?raw=true)
-6. Test that you now have MicroPython running via REPL on the Pico.
+
+6. Test that you now have MicroPython running via REPL on the Pico.  You can type the following code in the REPL window:
+```
+print("Hello Micropython!")
+```
 7. Load the following file from [Src](/Src) into Pico's memory:
       - rp_devices.py
       - sdcard.py
@@ -42,6 +49,37 @@ A simple mono channel recorder using an RP2040 Pico connected to an electret mic
 2. Connect Power and GND from RP2040 Pico module to the power rail.  3V3 to (+) rail and GND to (-) Rail.  Typically, a Red wire should be used for (+) and a Black wire for (-).  In our case a Green wire can be used for the (-) since we are treating (-) as GND in our circuit.
 3. Bridge the top positive and bottom positive rails with a connection wire.
 ![Breadboard Power](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/Wireup_board_power.png?raw=true)
+
+## LED and Push Button Circuit
+1. Plug the LED into the breadboard.  LED has a polarity and the one we are using is called a TO package.  Note that the longer leg is a (+) positive terminal and the shorter leg is the (-) negative terminal.  Some LEDs might have the leads clipped to equal lenght, but you can still determine the polarity by looking at the LED from the top view.  The flat cut side is the (-) negative terminal.
+
+![LED Details](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LED_details.png?raw=true)
+
+2. Add the 150-ohm resistor to the (-) negative pin of the LED and connect it to the ground (-) rail of the breadboard.
+
+![LED Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LEDcircuit.png?raw=true)
+
+3. Now add the tactile push button switch to the breadboard.  Note that there are only two pins on this version of the switch.  Connect it across the middle channel of the breadboard. Add the 1k-Ohm resistor to top pin of the switch and then connect that to the positive (+) rail of the breadboard.
+
+![LED Switch Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LED_pushbutton_circuit.png?raw=true)
+
+4. Test this circuit by copying the code from [LED_and_Button.py](/Examples/LED_and_Button.py) and run the code on the Pico.  If everything is correctly connected, the LED should blink and turn off when you push the button.
+
+## Microphone Circuit
+1. Add the microphone component to board.  Note that the physical component doesn't exactly match the diagram here, but you should be able to follow the pin labels.  This microphone component is an omnidirection electret condensor with a pre-amp circuit.
+
+![SDCard Prep](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/MicrophoneCircuit.png?raw=true)
+
+2. Wire the connections according to the shown image.  Note that VCC pin is connected to the VBUS pin (Pin 40) on the Pico to get the 5V for VCC.  This gives the mic a higher bias voltage, resulting in a better SNR.
+
+## SD Card Circuit
+1. Add the SD Card slot component to the breadboard.  To make wiring easier to use and troubleshoot, place the component on the top side of the breadboard and then use short jumper wires to connect it across the center slot of the breadboard.  This gives you the entire column to connect to the component pins.
+
+![SDCard Prep](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SDCardprep.png?raw=true)
+
+2. Connect the wires to the designated pins on the Pico pins.  Note that the diagram here doesn't match the physical component exactly, but you should be able to follow the same pin labels.  No need to connect the 5V pin.  Connect all the GND pins on the SD Card slot to the (-) rail on the breadboard.
+
+![SDCard Connection](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SDcard_connection.png?raw=true)
 
 ## Final Circuit
 1. If you have everything wired up correctly, you should be able to just insert a FAT32 formatted SD card into the Card Reader and click the push button to activate recording.  Note that the LED will turn on for a few second to indicate that memory is being allocated for the recording.  The LED will flash twice and then turn solid at the same time as the Green LED on the Pico turns on.  This indicate that the recording started and it'll go for 10 seconds and all the light will turn off.  SD Card can be checked for the WAV file of the recording.  Please also note that the Pico has to be power cycled to do another recording.  There's some additional work to be done to allow multiple recordings without power cycling.
