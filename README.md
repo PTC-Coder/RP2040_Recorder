@@ -34,6 +34,10 @@ print("Hello Micropython!")
 7. Load the following file from [Src](/Src) into Pico's memory:
       - rp_devices.py
       - sdcard.py
+	  
+8. It might be a good idea to save the source code to your computer first so you can easily find the file in the file browser we enabled in Step 5.  Make sure that your Pico is connected and you can see REPL working.  Right click on the file you want to load to the Pico and select the "Upload To /" option.  The file should appear on the Pico device after a successful upload.
+
+![Thonny View Files](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LoadFile.png?raw=true)
 
 ## Understanding Breadboard
 1. First we need to understand how the breadboard is laid out.  We'll be working with a standard-size breadboard with power rails on the top and bottom sides of the board.  Pay attention to the label or colored lines indicating the rail polarity.  The negative rail is usually connected across the entire row from left to right.  The same is true for the positive rail. Different breadboards have different rail labels so please carefully note the labels. In the center of the breadboard, each hole in the same column is connected to each other, separated by the center gap in the middle. None of the columns are connected to each other.
