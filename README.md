@@ -76,6 +76,8 @@ print("Hello Micropython!")
 
 2. Wire the connections according to the shown image.  Note that VCC pin is connected to the VBUS pin (Pin 40) on the Pico to get the 5V for VCC.  This gives the mic a higher bias voltage, resulting in a better SNR.
 
+3. You can test this circuit portion by running the [ADC_DMA_doublebuff.py](/Examples/ADC_DMA_doublebuff.py) code to continuously grab data from the microphone to the ADC and transfer them to the Direct Memory Access (DMA) channels on the Pico. This code will not work if don't have the [rp_devices.py](/Src/rp_devices.py) loaded into the Pico already.
+
 ## SD Card Circuit
 1. Add the SD Card slot component to the breadboard.  To make wiring easier to use and troubleshoot, place the component on the top side of the breadboard and then use short jumper wires to connect it across the center slot of the breadboard.  This gives you the entire column to connect to the component pins.
 
@@ -85,10 +87,15 @@ print("Hello Micropython!")
 
 ![SDCard Connection](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SDcard_connection.png?raw=true)
 
+3. Test this circuit by copying the code from [SDCard_test.py](Examples/SDCard_test.py) and run the code on the Pico.  This will test the reading and writing of the SD card.  This code will not work if you don't have the [sdcard.py](/Src/sdcard.py) uploaded to the Pico already.
+
 ## Final Circuit
-1. If you have everything wired up correctly, you should be able to just insert a FAT32 formatted SD card into the Card Reader and click the push button to activate recording.  Note that the LED will turn on for a few second to indicate that memory is being allocated for the recording.  The LED will flash twice and then turn solid at the same time as the Green LED on the Pico turns on.  This indicate that the recording started and it'll go for 10 seconds and all the light will turn off.  SD Card can be checked for the WAV file of the recording.  Please also note that the Pico has to be power cycled to do another recording.  There's some additional work to be done to allow multiple recordings without power cycling.
-2. This recorder doesn't have the greatest audio quality due to using the built-in 12-bit ADC on the Pico.  The recording runs at 16kHz sampling rate and this is the best that this recorder can do without doing a DMA Ping-Pong buffering technique.
-3. The WAV file can be opened with the [Raven Software](https://store.birds.cornell.edu/collections/raven-sound-software) to analyze the audio.
+1. Load [main.py](/Src/main.py) into the Pico along with the other 2 files [rp_devices.py](/Src/rp_devices.py), [sdcard.py](/Src/sdcard.py) we uploaded earlier from the setup step.
+2. Power cycle the Pico by unplugging the USB connector, wait 2 seconds, and plug it back in.
+3. Because we now have main.py in the Pico memory, it'll automatically execute the code in main.py script.
+4. If you have everything wired up correctly, you should be able to just insert a FAT32 formatted SD card into the Card Reader and click the push button to activate recording.  Note that the LED will turn on for a few second to indicate that memory is being allocated for the recording.  The LED will flash twice and then turn solid at the same time as the Green LED on the Pico turns on.  This indicate that the recording started and it'll go for 10 seconds and all the light will turn off.  SD Card can be checked for the WAV file of the recording.  Please also note that the Pico has to be power cycled to do another recording.  There's some additional work to be done to allow multiple recordings without power cycling.
+5. This recorder doesn't have the greatest audio quality due to using the built-in 12-bit ADC on the Pico.  The recording runs at 16kHz sampling rate and this is the best that this recorder can do without doing a DMA Ping-Pong buffering technique.
+6. The WAV file can be opened with the [Raven Software](https://store.birds.cornell.edu/collections/raven-sound-software) to analyze the audio.
 
 ![alt text](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/spectrogram.png?raw=true)
 
