@@ -20,7 +20,7 @@ Channel = enum(MONO=1, STEREO=2)
 AUDIO_BUFFER_SIZE = const(48000)  #number of samples
 
 # ======= AUDIO CONFIGURATION =======
-WAV_FILE = "RP2040_Recorder_" + str(fileCount) + ".wav"
+WAV_FILE = "RP2040_Recorder_" + "{:03d}".format(fileCount) + ".wav"
 RECORD_TIME_IN_SECONDS = 10
 WAV_SAMPLE_SIZE_IN_BITS = 16
 FORMAT = Channel.MONO
@@ -33,7 +33,7 @@ SD_SPI_MISO_PIN = 16
 SD_SPI_CS_PIN = 17
 SD_SPI_BAUD_RATE = 40000000
 
-   
+  
 def create_wav_header(sampleRate, bitsPerSample, num_channels, num_samples):
     datasize = num_samples * num_channels * bitsPerSample // 8
     o = bytes("RIFF", "ascii")  # (4byte) Marks file as RIFF
@@ -139,6 +139,9 @@ while True:
         
         adc.FCS.EN = adc.FCS.DREQ_EN = 1
         
+        #halt/reset DMA
+        dma0.CHAN_ABORT = 3
+        
         adc_buff0 = array.array('H', (0 for _ in range(actual_samples)))
         #adc_buff0 = bytearray(actual_samples)
         adc_buff0_mv = memoryview(adc_buff0)
@@ -171,7 +174,9 @@ while True:
             RECORD_TIME_IN_SECONDS * SAMPLE_RATE_IN_HZ * WAV_SAMPLE_SIZE_IN_BYTES * NUM_CHANNELS
         )
         
-        print("Creating WAV File Header ...")
+        print("Creating WAV File Header ...")        
+        
+        WAV_FILE = "RP2040_Recorder_" + "{:03d}".format(fileCount) + ".wav"
         
         with open("/sd/{}".format(WAV_FILE), "wb") as wav: #write in bytes
             wav_header = create_wav_header(
@@ -198,7 +203,7 @@ while True:
             #ignore the fractional part ( <<8  is used for that)
             adc.DIV_REG = (48000000 // RATE - 1) << 8
             adc.FCS.THRESH = adc.FCS.OVER = adc.FCS.UNDER = 1
-
+            
             dma_chan0.READ_ADDR_REG = devs.ADC_FIFO_ADDR
             dma_chan0.WRITE_ADDR_REG = uctypes.addressof(adc_buff0_mv)
             dma_chan0.TRANS_COUNT_REG = NSAMPLES * WAV_SAMPLE_SIZE_IN_BITS // 8
@@ -275,6 +280,8 @@ while True:
             adc.CS.START_MANY = 0
             dma_chan0.CTRL_TRIG.EN = 0
             
+            #Increment file count
+            fileCount += 1
             #wav.write(buffer_mv)
             
             print("==========  DONE RECORDING ==========")
