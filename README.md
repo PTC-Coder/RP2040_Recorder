@@ -9,7 +9,7 @@ A simple mono channel recorder using an RP2040 Pico connected to an electret mic
 * QTY 1 [SDXC Card, At least 90 MB/s transfer](https://www.bhphotovideo.com/c/product/1692701-REG/sandisk_sdsdxxu_064g_ancin_64gb_extreme_pro_uhs_i.html)
 * QTY 1 [2-pin Tact Push Button Switch N.O.](https://www.amazon.com/dp/B07WF76VHT)
 * QTY 1 LED
-* QTY 1 1k-Ohm Resistor
+* QTY 1 10k-Ohm Resistor
 * QTY 1 150-Ohm Resistor
 * QTY 1 [Breadboard](https://www.amazon.com/dp/B0B1XFQDQY)
 * QTY 1 [Breadboard Jumper Kit](https://www.amazon.com/dp/B08YRGVYPV)
@@ -55,7 +55,7 @@ print("Hello Micropython!")
 ![Breadboard Power](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/Wireup_board_power.png?raw=true)
 
 ## LED and Push Button Circuit
-1. Plug the LED into the breadboard.  LED has a polarity and the one we are using is called a TO package.  Note that the longer leg is a (+) positive terminal and the shorter leg is the (-) negative terminal.  Some LEDs might have the leads clipped to equal lenght, but you can still determine the polarity by looking at the LED from the top view.  The flat cut side is the (-) negative terminal.
+1. Plug the LED into the breadboard.  LED has a polarity and the one we are using is called a TO package.  Note that the longer leg is a (+) positive terminal and the shorter leg is the (-) negative terminal.  Some LEDs might have the leads clipped to equal length, but you can still determine the polarity by looking at the LED from the top view.  The flat cut side is the (-) negative terminal.
 
 ![LED Details](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LED_details.png?raw=true)
 
@@ -63,7 +63,7 @@ print("Hello Micropython!")
 
 ![LED Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LEDcircuit.png?raw=true)
 
-3. Now add the tactile push button switch to the breadboard.  Note that there are only two pins on this version of the switch.  Connect it across the middle channel of the breadboard. Add the 1k-Ohm resistor to top pin of the switch and then connect that to the positive (+) rail of the breadboard.
+3. Now add the tactile push button switch to the breadboard.  Note that there are only two pins on this version of the switch.  Connect it across the middle channel of the breadboard. Add the 10k-Ohm resistor to top pin of the switch and then connect that to the positive (+) rail of the breadboard.
 
 ![LED Switch Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/LED_pushbutton_circuit.png?raw=true)
 
