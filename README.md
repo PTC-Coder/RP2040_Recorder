@@ -110,7 +110,11 @@ Here's the physical board layout connection for the SD Card Slot to the Pico
 
 3. Test this circuit by copying the code from [SDCard_test.py](Examples/SDCard_test.py) and run the code on the Pico.  This will test the reading and writing of the SD card.  This code will not work if you don't have the [sdcard.py](/Src/sdcard.py) uploaded to the Pico already.  Before running the code, make sure you have a FAT32 formatted SD card inserted into the SD Card slot.
 
+![SD Circuit Message](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SDCircuitMessage.png?raw=true)
+
 <span style="color:Tomato">*** Important ***</span> Some breadboard might have poor connections due to the poor quality of the grid lattice and you will keep on getting "OSError: timeout waiting for v2 card" even with the SD Card inserted. The clock timing and data exchanges are critical and require a solid connection. The pins might need to be soldered directly from the SD Card holder to the Pico pins.  Please let us know if you ran into this issue, and we can help solder the pins. You can also exchange the breadboard for a higher quality one (Jameco Valuepro WBU-202-R).
+
+![Card Error](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/WaitingForCard.png?raw=true)
 
 ![Soldered Connections](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SolderedPins.png?raw=true)
 
@@ -122,6 +126,7 @@ Here's the physical board layout connection for the SD Card Slot to the Pico
 5. This recorder doesn't have the greatest audio quality due to using the built-in 12-bit ADC on the Pico.  The recording runs at 16kHz sampling rate and this is the best that this recorder can do without doing a DMA Ping-Pong buffering technique.  You can push the button again to start another recording.  The file name will have an automatic incrementing number to not overwrite the previous file.  If the Pico is power cycled, the file numbering with start again at 000.
 
 ![Pico Recorder](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/PicoRecorder.gif?raw=true)
+![Pico Recorder Message](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/FinalCircuitMessage.gif?raw=true)
 
 6. Eject the SD Card and use a card reader on your computer to read the recorded audio files in WAV format. The WAV file can be opened with the [Raven Software](https://store.birds.cornell.edu/collections/raven-sound-software) to analyze the audio.  You can also use [Audacity](https://www.audacityteam.org/download/).
 
