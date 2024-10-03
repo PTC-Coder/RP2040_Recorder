@@ -80,9 +80,15 @@ print("Hello Micropython!")
 ## Microphone Circuit
 1. Add the microphone component to board.  Note that the physical component doesn't exactly match the diagram here, but you should be able to follow the pin labels.  This microphone component is an omnidirection electret condensor with a pre-amp circuit.
 
-![SDCard Prep](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/MicrophoneCircuit.png?raw=true)
+![Mic Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/MicrophoneCircuit.png?raw=true)
 
-2. Wire the connections according to the shown image.  Note that VCC pin is connected to the VBUS pin (Pin 40) on the Pico to get the 5V for VCC.  This gives the mic a higher bias voltage, resulting in a better SNR.
+2. Wire the connections according to the shown images.  
+
+![Mic Circuit](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/MicrophoneCircuit2.png?raw=true)
+
+![Mic Conn](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/mic_conn.png?raw=true)
+
+![RPi Mic Conn](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/RPiMicConn.png?raw=true)
 
 3. You can test this circuit portion by running the [ADC_DMA_doublebuff.py](/Examples/ADC_DMA_doublebuff.py) code to continuously grab data from the microphone to the ADC and transfer them to the Direct Memory Access (DMA) channels on the Pico. This code will not work if don't have the [rp_devices.py](/Src/rp_devices.py) loaded into the Pico already.
 
@@ -104,7 +110,7 @@ Here's the physical board layout connection for the SD Card Slot to the Pico
 
 3. Test this circuit by copying the code from [SDCard_test.py](Examples/SDCard_test.py) and run the code on the Pico.  This will test the reading and writing of the SD card.  This code will not work if you don't have the [sdcard.py](/Src/sdcard.py) uploaded to the Pico already.  Before running the code, make sure you have a FAT32 formatted SD card inserted into the SD Card slot.
 
-*** Important *** Some breadboard might have poor connections due to the poor quality of the grid lattice and you will keep on getting "OSError: timeout waiting for v2 card" even with the SD Card inserted. The clock timing and data exchanges are critical and require a solid connection. The pins might need to be soldered directly from the SD Card holder to the Pico pins.  Please let us know if you ran into this issue, and we can help solder the pins.
+<span style="color:Tomato">*** Important ***</span> Some breadboard might have poor connections due to the poor quality of the grid lattice and you will keep on getting "OSError: timeout waiting for v2 card" even with the SD Card inserted. The clock timing and data exchanges are critical and require a solid connection. The pins might need to be soldered directly from the SD Card holder to the Pico pins.  Please let us know if you ran into this issue, and we can help solder the pins. You can also exchange the breadboard for a higher quality one (Jameco Valuepro WBU-202-R).
 
 ![Soldered Connections](https://github.com/PTC-Coder/RP2040_Recorder/blob/main/Documents/SolderedPins.png?raw=true)
 
