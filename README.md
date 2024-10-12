@@ -13,7 +13,7 @@ A simple mono channel recorder using an RP2040 Pico connected to an electret mic
 * QTY 1 LED
 * QTY 1 10k-Ohm Resistor
 * QTY 1 150-Ohm Resistor
-* QTY 1 [Breadboard](https://www.amazon.com/dp/B0B1XFQDQY)
+* QTY 1 [Breadboard](https://www.jameco.com/z/WBU-202-R-Jameco-ValuePro-830-Point-Solderless-Breadboard-6-5-x-2-125-_20723.html?srsltid=AfmBOoq5cM_VpS_4ovP-ksN4UnIrpLpnrVN2nuHmMNEXi2tYzosp8rYM)
 * QTY 1 [Breadboard Jumper Kit](https://www.amazon.com/dp/B08YRGVYPV)
 * QTY 1 [Micro-USB to USB-A power+data cable](https://www.amazon.com/Amazon-Basics-Charging-Transfer-Gold-Plated/dp/B0711PVX6Z)
 
